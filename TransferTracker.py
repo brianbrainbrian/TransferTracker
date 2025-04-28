@@ -19,6 +19,10 @@ transfers_file = os.path.join(data_folder, "stock_transfers.xlsx")
 
 # Load location list
 def load_locations():
+    if not os.path.exists(stock_on_hand_file):
+        st.error(f"Stock on hand file '{stock_on_hand_file}' not found.")
+        st.stop()
+
     df = pd.read_excel(stock_on_hand_file)
     if "Bin Location Description" not in df.columns:
         st.error("'Bin Location Description' column not found in book1.xlsx.")
@@ -28,13 +32,18 @@ def load_locations():
 
 # Load parts list
 def load_parts():
+    if not os.path.exists(catalogue_file):
+        st.error(f"Catalogue file '{catalogue_file}' not found.")
+        st.stop()
+
     df = pd.read_excel(catalogue_file)
-    if "Item Code" not in df.columns or "ItemName" not in df.columns:
+    if "ItemCode" not in df.columns or "ItemName" not in df.columns:
         st.error("'ItemCode' or 'ItemName' column not found in CATALOGUE.xlsx.")
         st.stop()
-    df["Combined"] = df["ItemCode"] + " - " + df["ItemName"]
+    df["Combined"] = df["ItemCode"].astype(str) + " - " + df["ItemName"].astype(str)
     return df
 
+# Load data
 locations_list = load_locations()
 parts_df = load_parts()
 all_parts = parts_df["Combined"].tolist()
@@ -62,13 +71,12 @@ def save_transfers(rows):
 
     records = []
     for row in rows:
-        # Split item_selected back into Item Code and Item Name
         selected_text = row["item_selected"]
         if " - " in selected_text:
             item_code, item_name = selected_text.split(" - ", 1)
         else:
             item_code, item_name = selected_text, ""
-        
+
         records.append({
             "Date": datetime.now().strftime("%Y-%m-%d"),
             "Time": datetime.now().strftime("%H:%M:%S"),
@@ -100,30 +108,36 @@ for idx, row in enumerate(st.session_state.transfer_rows):
 
     with cols[0]:
         selection = st.selectbox(
-            f"Item", options=all_parts, index=all_parts.index(row["item_selected"]) if row["item_selected"] in all_parts else 0, key=f"item_{idx}",
+            "Item", options=[""] + all_parts,
+            index=(all_parts.index(row["item_selected"]) + 1) if row["item_selected"] in all_parts else 0,
+            key=f"item_{idx}",
         )
         st.session_state.transfer_rows[idx]["item_selected"] = selection
 
     with cols[1]:
-        quantity = st.number_input(f"Qty", min_value=1, value=row["quantity"], key=f"qty_{idx}")
+        quantity = st.number_input("Qty", min_value=1, value=row["quantity"], key=f"qty_{idx}")
         st.session_state.transfer_rows[idx]["quantity"] = quantity
 
     with cols[2]:
         from_loc = st.selectbox(
-            f"From", options=locations_list, index=locations_list.index(row["from_location"]) if row["from_location"] in locations_list else 0, key=f"from_{idx}",
+            "From", options=locations_list,
+            index=locations_list.index(row["from_location"]) if row["from_location"] in locations_list else 0,
+            key=f"from_{idx}",
         )
         st.session_state.transfer_rows[idx]["from_location"] = from_loc
 
     with cols[3]:
         to_loc = st.selectbox(
-            f"To", options=locations_list, index=locations_list.index(row["to_location"]) if row["to_location"] in locations_list else 0, key=f"to_{idx}",
+            "To", options=locations_list,
+            index=locations_list.index(row["to_location"]) if row["to_location"] in locations_list else 0,
+            key=f"to_{idx}",
         )
         st.session_state.transfer_rows[idx]["to_location"] = to_loc
 
 st.markdown("---")
 
 # Buttons
-col1, col2, col3 = st.columns([1,1,2])
+col1, col2, col3 = st.columns([1, 1, 2])
 
 with col1:
     if st.button("➕ Add Row"):
