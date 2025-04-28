@@ -129,7 +129,7 @@ rows_to_delete = []
 for idx, row in enumerate(st.session_state.transfer_rows):
     st.markdown(f"**Transfer {idx+1}**")
 
-    cols = st.columns([3, 3, 4, 1])  # To | From | Item | Qty
+    cols = st.columns([2, 2, 6, 1])  # To | From | Item | Qty
 
     with cols[0]:
         to_loc = st.selectbox(
