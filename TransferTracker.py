@@ -110,6 +110,9 @@ def last_row_has_item_selected():
 # ---------- Load Data ----------
 
 locations_list = load_locations()
+if not locations_list:
+    st.error("⚠️ No locations available. Please check book1.xlsx.")
+    st.stop()
 parts_df = load_parts()
 all_parts = parts_df["Combined"].tolist()
 
