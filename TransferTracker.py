@@ -50,7 +50,7 @@ def add_row(prev_from=None, prev_to=None):
         "quantity": 0,
         "from_location": prev_from if prev_from else locations_list[0],
         "to_location": prev_to if prev_to else locations_list[0],
-        "notes": "",
+        "notes": "",  # Safe default
     }
     st.session_state.transfer_rows.append(new_row)
 
@@ -69,7 +69,6 @@ def save_transfers(rows):
         selected_text = row["item_selected"]
         quantity = row["quantity"]
 
-        # Only save rows with Item selected and Quantity > 0
         if selected_text and quantity > 0:
             if " - " in selected_text:
                 item_code, item_name = selected_text.split(" - ", 1)
@@ -110,15 +109,17 @@ def last_row_has_item_selected():
 # ---------- Load Data ----------
 
 locations_list = load_locations()
-if not locations_list:
-    st.error("⚠️ No locations available. Please check book1.xlsx.")
-    st.stop()
 parts_df = load_parts()
 all_parts = parts_df["Combined"].tolist()
 
 # ---------- Session State ----------
 if "transfer_rows" not in st.session_state:
     st.session_state.transfer_rows = []
+
+# Patch old rows to add "notes" if missing
+for row in st.session_state.transfer_rows:
+    if "notes" not in row:
+        row["notes"] = ""
 
 # Add first row if empty
 if len(st.session_state.transfer_rows) == 0:
