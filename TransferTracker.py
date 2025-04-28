@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import os
 from datetime import datetime
-from rapidfuzz import process
 
 # ---------- Setup ----------
 st.set_page_config(page_title="Stock Transfer Tracker", page_icon="🚚", layout="wide")
@@ -65,6 +64,10 @@ def add_row(prev_from=None, prev_to=None):
 def clear_rows():
     st.session_state.transfer_rows = []
 
+def delete_row(idx):
+    if 0 <= idx < len(st.session_state.transfer_rows):
+        st.session_state.transfer_rows.pop(idx)
+
 def save_transfers(rows):
     if not rows:
         return
@@ -101,38 +104,66 @@ def save_transfers(rows):
 
 st.markdown("### Fill Stock Transfers:")
 
-# Display transfer rows
+# Display transfer rows with card style
+rows_to_delete = []
+
 for idx, row in enumerate(st.session_state.transfer_rows):
-    st.markdown(f"**Transfer {idx+1}**")
-    cols = st.columns([4, 1, 3, 3])
-
-    with cols[0]:
-        selection = st.selectbox(
-            "Item", options=[""] + all_parts,
-            index=(all_parts.index(row["item_selected"]) + 1) if row["item_selected"] in all_parts else 0,
-            key=f"item_{idx}",
+    with st.container():
+        st.markdown(
+            f"""
+            <div style='
+                background-color: #f7f7f7;
+                border-radius: 10px;
+                padding: 20px;
+                margin-bottom: 20px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            '>
+            <h4 style='margin-top: 0;'>Transfer {idx+1}</h4>
+            """,
+            unsafe_allow_html=True,
         )
-        st.session_state.transfer_rows[idx]["item_selected"] = selection
 
-    with cols[1]:
-        quantity = st.number_input("Qty", min_value=1, value=row["quantity"], key=f"qty_{idx}")
-        st.session_state.transfer_rows[idx]["quantity"] = quantity
+        cols = st.columns([4, 1, 3, 3])
 
-    with cols[2]:
-        from_loc = st.selectbox(
-            "From", options=locations_list,
-            index=locations_list.index(row["from_location"]) if row["from_location"] in locations_list else 0,
-            key=f"from_{idx}",
-        )
-        st.session_state.transfer_rows[idx]["from_location"] = from_loc
+        with cols[0]:
+            selection = st.selectbox(
+                "Item", options=[""] + all_parts,
+                index=(all_parts.index(row["item_selected"]) + 1) if row["item_selected"] in all_parts else 0,
+                key=f"item_{idx}",
+            )
+            st.session_state.transfer_rows[idx]["item_selected"] = selection
 
-    with cols[3]:
-        to_loc = st.selectbox(
-            "To", options=locations_list,
-            index=locations_list.index(row["to_location"]) if row["to_location"] in locations_list else 0,
-            key=f"to_{idx}",
-        )
-        st.session_state.transfer_rows[idx]["to_location"] = to_loc
+        with cols[1]:
+            quantity = st.number_input(
+                "Qty", min_value=1, value=row["quantity"], key=f"qty_{idx}"
+            )
+            st.session_state.transfer_rows[idx]["quantity"] = quantity
+
+        with cols[2]:
+            from_loc = st.selectbox(
+                "From", options=locations_list,
+                index=locations_list.index(row["from_location"]) if row["from_location"] in locations_list else 0,
+                key=f"from_{idx}",
+            )
+            st.session_state.transfer_rows[idx]["from_location"] = from_loc
+
+        with cols[3]:
+            to_loc = st.selectbox(
+                "To", options=locations_list,
+                index=locations_list.index(row["to_location"]) if row["to_location"] in locations_list else 0,
+                key=f"to_{idx}",
+            )
+            st.session_state.transfer_rows[idx]["to_location"] = to_loc
+
+        # Delete button inside card
+        if st.button(f"❌ Delete Transfer {idx+1}", key=f"delete_{idx}"):
+            rows_to_delete.append(idx)
+
+        st.markdown("</div>", unsafe_allow_html=True)
+
+# Actually delete marked rows
+for idx in sorted(rows_to_delete, reverse=True):
+    delete_row(idx)
 
 st.markdown("---")
 
