@@ -85,12 +85,6 @@ def save_transfers(rows):
 
     combined_df.to_excel(transfers_file, index=False)
 
-def last_row_filled_now():
-    if not st.session_state.transfer_rows:
-        return False
-    last_row = st.session_state.transfer_rows[-1]
-    return last_row["item_selected"] != ""
-
 # ---------- Load Data ----------
 
 locations_list = load_locations()
@@ -100,19 +94,10 @@ all_parts = parts_df["Combined"].tolist()
 # ---------- Session State ----------
 if "transfer_rows" not in st.session_state:
     st.session_state.transfer_rows = []
-if "add_new_row_next_cycle" not in st.session_state:
-    st.session_state.add_new_row_next_cycle = False
 
-# Add the first row at startup if empty
+# Add first row if empty
 if len(st.session_state.transfer_rows) == 0:
     add_row()
-
-# If flag set, add a new blank row now
-if st.session_state.add_new_row_next_cycle:
-    prev_from = st.session_state.transfer_rows[-1]["from_location"]
-    prev_to = st.session_state.transfer_rows[-1]["to_location"]
-    add_row(prev_from, prev_to)
-    st.session_state.add_new_row_next_cycle = False
 
 # ---------- App Interface ----------
 
@@ -174,22 +159,27 @@ for idx, row in enumerate(st.session_state.transfer_rows):
 
         st.markdown("</div>", unsafe_allow_html=True)
 
-# After displaying form, check if last row filled
-if last_row_filled_now():
-    st.session_state.add_new_row_next_cycle = True
-
-# Actually delete rows if user pressed delete
+# Delete rows if delete button pressed
 for idx in sorted(rows_to_delete, reverse=True):
     delete_row(idx)
 
 st.markdown("---")
 
-# Submit button
-if st.button("✅ Submit Transfers"):
-    save_transfers(st.session_state.transfer_rows)
-    st.session_state.transfer_rows = []
-    add_row()
-    st.success("Transfers submitted successfully!")
+# Buttons for Add Row and Submit
+col1, col2 = st.columns([1, 1])
+
+with col1:
+    if st.button("➕ Add Row"):
+        prev_from = st.session_state.transfer_rows[-1]["from_location"]
+        prev_to = st.session_state.transfer_rows[-1]["to_location"]
+        add_row(prev_from, prev_to)
+
+with col2:
+    if st.button("✅ Submit Transfers"):
+        save_transfers(st.session_state.transfer_rows)
+        st.session_state.transfer_rows = []
+        add_row()
+        st.success("Transfers submitted successfully!")
 
 # ---------- Display Past Transfers ----------
 if os.path.exists(transfers_file):
