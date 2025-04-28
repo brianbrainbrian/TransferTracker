@@ -94,6 +94,8 @@ all_parts = parts_df["Combined"].tolist()
 # ---------- Session State ----------
 if "transfer_rows" not in st.session_state:
     st.session_state.transfer_rows = []
+if "add_row_requested" not in st.session_state:
+    st.session_state.add_row_requested = False
 
 # Add first row if empty
 if len(st.session_state.transfer_rows) == 0:
@@ -165,14 +167,12 @@ for idx in sorted(rows_to_delete, reverse=True):
 
 st.markdown("---")
 
-# Buttons for Add Row and Submit
+# Add Row and Submit buttons
 col1, col2 = st.columns([1, 1])
 
 with col1:
     if st.button("➕ Add Row"):
-        prev_from = st.session_state.transfer_rows[-1]["from_location"]
-        prev_to = st.session_state.transfer_rows[-1]["to_location"]
-        add_row(prev_from, prev_to)
+        st.session_state.add_row_requested = True
 
 with col2:
     if st.button("✅ Submit Transfers"):
@@ -180,6 +180,13 @@ with col2:
         st.session_state.transfer_rows = []
         add_row()
         st.success("Transfers submitted successfully!")
+
+# After rendering everything: handle pending Add Row request
+if st.session_state.add_row_requested:
+    prev_from = st.session_state.transfer_rows[-1]["from_location"]
+    prev_to = st.session_state.transfer_rows[-1]["to_location"]
+    add_row(prev_from, prev_to)
+    st.session_state.add_row_requested = False
 
 # ---------- Display Past Transfers ----------
 if os.path.exists(transfers_file):
