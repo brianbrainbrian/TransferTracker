@@ -16,12 +16,12 @@ stock_on_hand_file = os.path.join(data_folder, "book1.xlsx")
 catalogue_file = os.path.join(data_folder, "CATALOGUE.xlsx")
 transfers_file = os.path.join(data_folder, "stock_transfers.xlsx")
 
-# Load location list
+# ---------- Functions ----------
+
 def load_locations():
     if not os.path.exists(stock_on_hand_file):
         st.error(f"Stock on hand file '{stock_on_hand_file}' not found.")
         st.stop()
-
     df = pd.read_excel(stock_on_hand_file)
     if "Bin Location Description" not in df.columns:
         st.error("'Bin Location Description' column not found in book1.xlsx.")
@@ -29,12 +29,10 @@ def load_locations():
     locations = sorted(df["Bin Location Description"].dropna().unique().tolist())
     return locations
 
-# Load parts list
 def load_parts():
     if not os.path.exists(catalogue_file):
         st.error(f"Catalogue file '{catalogue_file}' not found.")
         st.stop()
-
     df = pd.read_excel(catalogue_file)
     if "ItemCode" not in df.columns or "ItemName" not in df.columns:
         st.error("'ItemCode' or 'ItemName' column not found in CATALOGUE.xlsx.")
@@ -42,16 +40,6 @@ def load_parts():
     df["Combined"] = df["ItemCode"].astype(str) + " - " + df["ItemName"].astype(str)
     return df
 
-# Load data
-locations_list = load_locations()
-parts_df = load_parts()
-all_parts = parts_df["Combined"].tolist()
-
-# ---------- Session State ----------
-if "transfer_rows" not in st.session_state:
-    st.session_state.transfer_rows = []
-
-# ---------- Functions ----------
 def add_row(prev_from=None, prev_to=None):
     new_row = {
         "item_selected": "",
@@ -60,9 +48,6 @@ def add_row(prev_from=None, prev_to=None):
         "to_location": prev_to if prev_to else locations_list[0],
     }
     st.session_state.transfer_rows.append(new_row)
-
-def clear_rows():
-    st.session_state.transfer_rows = []
 
 def delete_row(idx):
     if 0 <= idx < len(st.session_state.transfer_rows):
@@ -100,13 +85,41 @@ def save_transfers(rows):
 
     combined_df.to_excel(transfers_file, index=False)
 
+def last_row_filled():
+    if not st.session_state.transfer_rows:
+        return False
+    last_row = st.session_state.transfer_rows[-1]
+    return last_row["item_selected"] != ""
+
+# ---------- Load Data ----------
+
+locations_list = load_locations()
+parts_df = load_parts()
+all_parts = parts_df["Combined"].tolist()
+
+# ---------- Session State ----------
+if "transfer_rows" not in st.session_state:
+    st.session_state.transfer_rows = []
+
+# Add the first row at startup if empty
+if len(st.session_state.transfer_rows) == 0:
+    add_row()
+
+# After form interactions, check if last row is filled
+if last_row_filled():
+    # Avoid adding multiple blank rows
+    if all(r["item_selected"] != "" for r in st.session_state.transfer_rows[:-1]):
+        prev_from = st.session_state.transfer_rows[-1]["from_location"]
+        prev_to = st.session_state.transfer_rows[-1]["to_location"]
+        add_row(prev_from, prev_to)
+
 # ---------- App Interface ----------
 
 st.markdown("### Fill Stock Transfers:")
 
-# Display transfer rows with card style
 rows_to_delete = []
 
+# Display transfer rows with card style
 for idx, row in enumerate(st.session_state.transfer_rows):
     with st.container():
         st.markdown(
@@ -155,41 +168,28 @@ for idx, row in enumerate(st.session_state.transfer_rows):
             )
             st.session_state.transfer_rows[idx]["to_location"] = to_loc
 
-        # Delete button inside card
         if st.button(f"❌ Delete Transfer {idx+1}", key=f"delete_{idx}"):
             rows_to_delete.append(idx)
 
         st.markdown("</div>", unsafe_allow_html=True)
 
-# Actually delete marked rows
+# Actually delete rows
 for idx in sorted(rows_to_delete, reverse=True):
     delete_row(idx)
 
 st.markdown("---")
 
-# Buttons
-col1, col2, col3 = st.columns([1, 1, 2])
+# Submit button
+if st.button("✅ Submit Transfers"):
+    save_transfers(st.session_state.transfer_rows)
+    st.session_state.transfer_rows = []
+    add_row()
+    st.success("Transfers submitted successfully!")
 
-with col1:
-    if st.button("➕ Add Row"):
-        prev_from = st.session_state.transfer_rows[-1]["from_location"] if st.session_state.transfer_rows else None
-        prev_to = st.session_state.transfer_rows[-1]["to_location"] if st.session_state.transfer_rows else None
-        add_row(prev_from, prev_to)
-
-with col2:
-    if st.button("✅ Submit"):
-        save_transfers(st.session_state.transfer_rows)
-        clear_rows()
-        st.success("Transfers submitted successfully!")
-
-# Display last 10 transfers
+# ---------- Display Past Transfers ----------
 if os.path.exists(transfers_file):
     st.markdown("### Last 10 Transfers:")
     df = pd.read_excel(transfers_file)
     st.dataframe(df.tail(10), use_container_width=True)
 else:
     st.info("No transfers have been submitted yet.")
-
-# Add initial row if empty
-if not st.session_state.transfer_rows:
-    add_row()
