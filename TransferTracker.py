@@ -133,35 +133,46 @@ for idx, row in enumerate(st.session_state.transfer_rows):
 
     cols = st.columns([2, 2, 5, 1, 3])  # To, From, Item, Qty, Notes
 
-    cols = st.columns([2, 2, 5, 1, 3])
-
     with cols[0]:
+        current_to = row.get("to_location", None)
+        if current_to not in locations_list:
+            current_to = locations_list[0]
+
         to_loc = st.selectbox(
             "To", options=locations_list,
-            index=(locations_list.index(row.get("to_location")) if row.get("to_location") in locations_list else 0),
+            index=locations_list.index(current_to),
             key=f"to_{idx}",
             use_container_width=True,
         )
         st.session_state.transfer_rows[idx]["to_location"] = to_loc
-    
+
     with cols[1]:
+        current_from = row.get("from_location", None)
+        if current_from not in locations_list:
+            current_from = locations_list[0]
+
         from_loc = st.selectbox(
             "From", options=locations_list,
-            index=(locations_list.index(row.get("from_location")) if row.get("from_location") in locations_list else 0),
+            index=locations_list.index(current_from),
             key=f"from_{idx}",
             use_container_width=True,
         )
         st.session_state.transfer_rows[idx]["from_location"] = from_loc
-    
+
     with cols[2]:
+        current_item = row.get("item_selected", "")
+        item_options = [""] + all_parts
+        if current_item not in item_options:
+            current_item = ""
+
         selection = st.selectbox(
-            "Item", options=[""] + all_parts,
-            index=(all_parts.index(row.get("item_selected")) + 1) if row.get("item_selected") in all_parts else 0,
+            "Item", options=item_options,
+            index=item_options.index(current_item),
             key=f"item_{idx}",
             use_container_width=True,
         )
         st.session_state.transfer_rows[idx]["item_selected"] = selection
-    
+
     with cols[3]:
         quantity = st.number_input(
             "Qty", min_value=0, value=row.get("quantity", 0), key=f"qty_{idx}",
@@ -169,13 +180,12 @@ for idx, row in enumerate(st.session_state.transfer_rows):
             format="%d",
         )
         st.session_state.transfer_rows[idx]["quantity"] = quantity
-    
+
     with cols[4]:
         note = st.text_input(
             "Notes", value=row.get("notes", ""), key=f"notes_{idx}"
         )
         st.session_state.transfer_rows[idx]["notes"] = note
-
 
     if st.button(f"❌ Delete Transfer {idx+1}", key=f"delete_{idx}"):
         rows_to_delete.append(idx)
