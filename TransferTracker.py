@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import os
 from datetime import datetime
+import pytz
 
 # ---------- Setup ----------
 st.set_page_config(page_title="Stock Transfer Tracker", page_icon="🚚", layout="wide")
@@ -15,6 +16,9 @@ os.makedirs(data_folder, exist_ok=True)
 stock_on_hand_file = os.path.join(data_folder, "book1.xlsx")
 catalogue_file = os.path.join(data_folder, "CATALOGUE.xlsx")
 transfers_file = os.path.join(data_folder, "stock_transfers.xlsx")
+
+# Define local timezone
+local_timezone = pytz.timezone('Australia/Sydney')
 
 # ---------- Functions ----------
 
@@ -43,7 +47,7 @@ def load_parts():
 def add_row(prev_from=None, prev_to=None):
     new_row = {
         "item_selected": "",
-        "quantity": 0,   # Default quantity now 0
+        "quantity": 0,   # Start with 0
         "from_location": prev_from if prev_from else locations_list[0],
         "to_location": prev_to if prev_to else locations_list[0],
     }
@@ -57,23 +61,33 @@ def save_transfers(rows):
     if not rows:
         return
 
+    now = datetime.now(local_timezone)
+
     records = []
     for row in rows:
         selected_text = row["item_selected"]
-        if " - " in selected_text:
-            item_code, item_name = selected_text.split(" - ", 1)
-        else:
-            item_code, item_name = selected_text, ""
+        quantity = row["quantity"]
 
-        records.append({
-            "Date": datetime.now().strftime("%Y-%m-%d"),
-            "Time": datetime.now().strftime("%H:%M:%S"),
-            "Item No": item_code,
-            "Item Description": item_name,
-            "Quantity": row["quantity"],
-            "From Location": row["from_location"],
-            "To Location": row["to_location"],
-        })
+        # Only keep rows with Item selected and Quantity > 0
+        if selected_text and quantity > 0:
+            if " - " in selected_text:
+                item_code, item_name = selected_text.split(" - ", 1)
+            else:
+                item_code, item_name = selected_text, ""
+
+            records.append({
+                "Date": now.strftime("%Y-%m-%d"),
+                "Time": now.strftime("%H:%M:%S"),
+                "Item No": item_code,
+                "Item Description": item_name,
+                "Quantity": quantity,
+                "From Location": row["from_location"],
+                "To Location": row["to_location"],
+            })
+
+    if not records:
+        st.warning("⚠️ No valid transfers to save.")
+        return
 
     new_df = pd.DataFrame(records)
 
@@ -150,13 +164,13 @@ for idx, row in enumerate(st.session_state.transfer_rows):
     if st.button(f"❌ Delete Transfer {idx+1}", key=f"delete_{idx}"):
         rows_to_delete.append(idx)
 
-# Handle deletion requests
+# Handle deletion
 for idx in sorted(rows_to_delete, reverse=True):
     delete_row(idx)
 
 st.markdown("---")
 
-# Check if last row has an item selected, then auto add new row
+# Check if last row has an item selected, then auto add a new blank row
 if last_row_has_item_selected():
     add_row()
 
