@@ -47,9 +47,10 @@ def load_parts():
 def add_row(prev_from=None, prev_to=None):
     new_row = {
         "item_selected": "",
-        "quantity": 0,  # Start at 0
+        "quantity": 0,
         "from_location": prev_from if prev_from else locations_list[0],
         "to_location": prev_to if prev_to else locations_list[0],
+        "notes": "",  # New field
     }
     st.session_state.transfer_rows.append(new_row)
 
@@ -83,6 +84,7 @@ def save_transfers(rows):
                 "Quantity": quantity,
                 "From Location": row["from_location"],
                 "To Location": row["to_location"],
+                "Notes": row.get("notes", ""),
             })
 
     if not records:
@@ -115,6 +117,11 @@ all_parts = parts_df["Combined"].tolist()
 if "transfer_rows" not in st.session_state:
     st.session_state.transfer_rows = []
 
+# Ensure all old rows have 'notes' field
+for row in st.session_state.transfer_rows:
+    if "notes" not in row:
+        row["notes"] = ""
+
 # Add first row if empty
 if len(st.session_state.transfer_rows) == 0:
     add_row()
@@ -129,7 +136,7 @@ rows_to_delete = []
 for idx, row in enumerate(st.session_state.transfer_rows):
     st.markdown(f"**Transfer {idx+1}**")
 
-    cols = st.columns([2, 2, 6, 1])  # To | From | Item | Qty
+    cols = st.columns([2, 2, 5, 1, 3])  # To | From | Item | Qty | Notes
 
     with cols[0]:
         to_loc = st.selectbox(
@@ -160,6 +167,12 @@ for idx, row in enumerate(st.session_state.transfer_rows):
             "Qty", min_value=0, value=row["quantity"], key=f"qty_{idx}"
         )
         st.session_state.transfer_rows[idx]["quantity"] = quantity
+
+    with cols[4]:
+        note = st.text_input(
+            "Notes", value=row.get("notes", ""), key=f"notes_{idx}"
+        )
+        st.session_state.transfer_rows[idx]["notes"] = note
 
     if st.button(f"❌ Delete Transfer {idx+1}", key=f"delete_{idx}"):
         rows_to_delete.append(idx)
