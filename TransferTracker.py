@@ -133,46 +133,49 @@ for idx, row in enumerate(st.session_state.transfer_rows):
 
     cols = st.columns([2, 2, 5, 1, 3])  # To, From, Item, Qty, Notes
 
+    cols = st.columns([2, 2, 5, 1, 3])
+
     with cols[0]:
         to_loc = st.selectbox(
             "To", options=locations_list,
-            index=(locations_list.index(row["to_location"]) if row["to_location"] in locations_list else 0),
+            index=(locations_list.index(row.get("to_location")) if row.get("to_location") in locations_list else 0),
             key=f"to_{idx}",
             use_container_width=True,
         )
         st.session_state.transfer_rows[idx]["to_location"] = to_loc
-
+    
     with cols[1]:
         from_loc = st.selectbox(
             "From", options=locations_list,
-            index=(locations_list.index(row["from_location"]) if row["from_location"] in locations_list else 0),
+            index=(locations_list.index(row.get("from_location")) if row.get("from_location") in locations_list else 0),
             key=f"from_{idx}",
             use_container_width=True,
         )
         st.session_state.transfer_rows[idx]["from_location"] = from_loc
-
+    
     with cols[2]:
         selection = st.selectbox(
             "Item", options=[""] + all_parts,
-            index=(all_parts.index(row["item_selected"]) + 1) if row["item_selected"] in all_parts else 0,
+            index=(all_parts.index(row.get("item_selected")) + 1) if row.get("item_selected") in all_parts else 0,
             key=f"item_{idx}",
             use_container_width=True,
         )
         st.session_state.transfer_rows[idx]["item_selected"] = selection
-
+    
     with cols[3]:
         quantity = st.number_input(
-            "Qty", min_value=0, value=row["quantity"], key=f"qty_{idx}",
+            "Qty", min_value=0, value=row.get("quantity", 0), key=f"qty_{idx}",
             step=1,
             format="%d",
         )
         st.session_state.transfer_rows[idx]["quantity"] = quantity
-
+    
     with cols[4]:
         note = st.text_input(
             "Notes", value=row.get("notes", ""), key=f"notes_{idx}"
         )
         st.session_state.transfer_rows[idx]["notes"] = note
+
 
     if st.button(f"❌ Delete Transfer {idx+1}", key=f"delete_{idx}"):
         rows_to_delete.append(idx)
