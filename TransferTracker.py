@@ -172,7 +172,8 @@ st.markdown("---")
 
 # Check if last row has an item selected, then auto add a new blank row
 if last_row_has_item_selected():
-    add_row()
+    last_row = st.session_state.transfer_rows[-1]
+    add_row(prev_from=last_row["from_location"], prev_to=last_row["to_location"])
 
 # Submit button
 if st.button("✅ Submit Transfers"):
