@@ -29,10 +29,10 @@ def load_locations():
 # Load parts list
 def load_parts():
     df = pd.read_excel(catalogue_file)
-    if "Item Code" not in df.columns or "Item Name" not in df.columns:
-        st.error("'Item Code' or 'Item Name' column not found in CATALOGUE.xlsx.")
+    if "Item Code" not in df.columns or "ItemName" not in df.columns:
+        st.error("'ItemCode' or 'ItemName' column not found in CATALOGUE.xlsx.")
         st.stop()
-    df["Combined"] = df["Item Code"] + " - " + df["Item Name"]
+    df["Combined"] = df["ItemCode"] + " - " + df["ItemName"]
     return df
 
 locations_list = load_locations()
