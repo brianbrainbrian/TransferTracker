@@ -43,7 +43,7 @@ def load_parts():
 def add_row(prev_from=None, prev_to=None):
     new_row = {
         "item_selected": "",
-        "quantity": 1,
+        "quantity": 0,   # Default quantity now 0
         "from_location": prev_from if prev_from else locations_list[0],
         "to_location": prev_to if prev_to else locations_list[0],
     }
@@ -85,6 +85,12 @@ def save_transfers(rows):
 
     combined_df.to_excel(transfers_file, index=False)
 
+def last_row_has_item_selected():
+    if not st.session_state.transfer_rows:
+        return False
+    last_row = st.session_state.transfer_rows[-1]
+    return last_row["item_selected"] != ""
+
 # ---------- Load Data ----------
 
 locations_list = load_locations()
@@ -105,87 +111,61 @@ st.markdown("### Fill Stock Transfers:")
 
 rows_to_delete = []
 
-# Display transfer rows with card style
+# Display transfer rows
 for idx, row in enumerate(st.session_state.transfer_rows):
-    with st.container():
-        # Start Card
-        st.markdown(
-            """
-            <div style='
-                background-color: #f7f7f7;
-                border-radius: 10px;
-                padding: 20px;
-                margin-bottom: 20px;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            '>
-            """,
-            unsafe_allow_html=True,
+    st.markdown(f"**Transfer {idx+1}**")
+
+    cols = st.columns([4, 1, 3, 3])
+
+    with cols[0]:
+        selection = st.selectbox(
+            "Item", options=[""] + all_parts,
+            index=(all_parts.index(row["item_selected"]) + 1) if row["item_selected"] in all_parts else 0,
+            key=f"item_{idx}",
         )
+        st.session_state.transfer_rows[idx]["item_selected"] = selection
 
-        # Transfer Number
-        st.markdown(f"<h4 style='margin-top: 0;'>Transfer {idx+1}</h4>", unsafe_allow_html=True)
+    with cols[1]:
+        quantity = st.number_input(
+            "Qty", min_value=0, value=row["quantity"], key=f"qty_{idx}"
+        )
+        st.session_state.transfer_rows[idx]["quantity"] = quantity
 
-        # Form Fields inside Card
-        cols = st.columns([4, 1, 3, 3])
+    with cols[2]:
+        from_loc = st.selectbox(
+            "From", options=locations_list,
+            index=locations_list.index(row["from_location"]) if row["from_location"] in locations_list else 0,
+            key=f"from_{idx}",
+        )
+        st.session_state.transfer_rows[idx]["from_location"] = from_loc
 
-        with cols[0]:
-            selection = st.selectbox(
-                "Item", options=[""] + all_parts,
-                index=(all_parts.index(row["item_selected"]) + 1) if row["item_selected"] in all_parts else 0,
-                key=f"item_{idx}",
-            )
-            st.session_state.transfer_rows[idx]["item_selected"] = selection
+    with cols[3]:
+        to_loc = st.selectbox(
+            "To", options=locations_list,
+            index=locations_list.index(row["to_location"]) if row["to_location"] in locations_list else 0,
+            key=f"to_{idx}",
+        )
+        st.session_state.transfer_rows[idx]["to_location"] = to_loc
 
-        with cols[1]:
-            quantity = st.number_input(
-                "Qty", min_value=1, value=row["quantity"], key=f"qty_{idx}"
-            )
-            st.session_state.transfer_rows[idx]["quantity"] = quantity
+    if st.button(f"❌ Delete Transfer {idx+1}", key=f"delete_{idx}"):
+        rows_to_delete.append(idx)
 
-        with cols[2]:
-            from_loc = st.selectbox(
-                "From", options=locations_list,
-                index=locations_list.index(row["from_location"]) if row["from_location"] in locations_list else 0,
-                key=f"from_{idx}",
-            )
-            st.session_state.transfer_rows[idx]["from_location"] = from_loc
-
-        with cols[3]:
-            to_loc = st.selectbox(
-                "To", options=locations_list,
-                index=locations_list.index(row["to_location"]) if row["to_location"] in locations_list else 0,
-                key=f"to_{idx}",
-            )
-            st.session_state.transfer_rows[idx]["to_location"] = to_loc
-
-        # Delete Button inside card
-        if st.button(f"❌ Delete Transfer {idx+1}", key=f"delete_{idx}"):
-            rows_to_delete.append(idx)
-
-        # End Card
-        st.markdown("</div>", unsafe_allow_html=True)
-
-# Delete rows if requested
+# Handle deletion requests
 for idx in sorted(rows_to_delete, reverse=True):
     delete_row(idx)
 
 st.markdown("---")
 
-# Buttons for Add Row and Submit
-col1, col2 = st.columns([1, 1])
+# Check if last row has an item selected, then auto add new row
+if last_row_has_item_selected():
+    add_row()
 
-with col1:
-    if st.button("➕ Add Row"):
-        prev_from = st.session_state.transfer_rows[-1]["from_location"]
-        prev_to = st.session_state.transfer_rows[-1]["to_location"]
-        add_row(prev_from, prev_to)
-
-with col2:
-    if st.button("✅ Submit Transfers"):
-        save_transfers(st.session_state.transfer_rows)
-        st.session_state.transfer_rows = []
-        add_row()
-        st.success("Transfers submitted successfully!")
+# Submit button
+if st.button("✅ Submit Transfers"):
+    save_transfers(st.session_state.transfer_rows)
+    st.session_state.transfer_rows = []
+    add_row()
+    st.success("Transfers submitted successfully!")
 
 # ---------- Display Past Transfers ----------
 if os.path.exists(transfers_file):
