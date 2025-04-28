@@ -47,9 +47,10 @@ def load_parts():
 def add_row(prev_from=None, prev_to=None):
     new_row = {
         "item_selected": "",
-        "quantity": 0,  # Start at 0
+        "quantity": 0,
         "from_location": prev_from if prev_from else locations_list[0],
         "to_location": prev_to if prev_to else locations_list[0],
+        "notes": "",
     }
     st.session_state.transfer_rows.append(new_row)
 
@@ -68,7 +69,7 @@ def save_transfers(rows):
         selected_text = row["item_selected"]
         quantity = row["quantity"]
 
-        # Only save rows where item is selected and quantity > 0
+        # Only save rows with Item selected and Quantity > 0
         if selected_text and quantity > 0:
             if " - " in selected_text:
                 item_code, item_name = selected_text.split(" - ", 1)
@@ -83,6 +84,7 @@ def save_transfers(rows):
                 "Quantity": quantity,
                 "From Location": row["from_location"],
                 "To Location": row["to_location"],
+                "Notes": row.get("notes", ""),
             })
 
     if not records:
@@ -129,21 +131,23 @@ rows_to_delete = []
 for idx, row in enumerate(st.session_state.transfer_rows):
     st.markdown(f"**Transfer {idx+1}**")
 
-    cols = st.columns([2, 2, 6, 1])  # To | From | Item | Qty
+    cols = st.columns([2, 2, 5, 1, 3])  # To, From, Item, Qty, Notes
 
     with cols[0]:
         to_loc = st.selectbox(
             "To", options=locations_list,
-            index=locations_list.index(row["to_location"]) if row["to_location"] in locations_list else 0,
+            index=(locations_list.index(row["to_location"]) if row["to_location"] in locations_list else 0),
             key=f"to_{idx}",
+            use_container_width=True,
         )
         st.session_state.transfer_rows[idx]["to_location"] = to_loc
 
     with cols[1]:
         from_loc = st.selectbox(
             "From", options=locations_list,
-            index=locations_list.index(row["from_location"]) if row["from_location"] in locations_list else 0,
+            index=(locations_list.index(row["from_location"]) if row["from_location"] in locations_list else 0),
             key=f"from_{idx}",
+            use_container_width=True,
         )
         st.session_state.transfer_rows[idx]["from_location"] = from_loc
 
@@ -152,14 +156,23 @@ for idx, row in enumerate(st.session_state.transfer_rows):
             "Item", options=[""] + all_parts,
             index=(all_parts.index(row["item_selected"]) + 1) if row["item_selected"] in all_parts else 0,
             key=f"item_{idx}",
+            use_container_width=True,
         )
         st.session_state.transfer_rows[idx]["item_selected"] = selection
 
     with cols[3]:
         quantity = st.number_input(
-            "Qty", min_value=0, value=row["quantity"], key=f"qty_{idx}"
+            "Qty", min_value=0, value=row["quantity"], key=f"qty_{idx}",
+            step=1,
+            format="%d",
         )
         st.session_state.transfer_rows[idx]["quantity"] = quantity
+
+    with cols[4]:
+        note = st.text_input(
+            "Notes", value=row.get("notes", ""), key=f"notes_{idx}"
+        )
+        st.session_state.transfer_rows[idx]["notes"] = note
 
     if st.button(f"❌ Delete Transfer {idx+1}", key=f"delete_{idx}"):
         rows_to_delete.append(idx)
@@ -170,7 +183,7 @@ for idx in sorted(rows_to_delete, reverse=True):
 
 st.markdown("---")
 
-# Check if last row has an item selected, then auto add new blank row
+# Check if last row has an item selected, then auto add a new blank row
 if last_row_has_item_selected():
     last_row = st.session_state.transfer_rows[-1]
     add_row(prev_from=last_row["from_location"], prev_to=last_row["to_location"])
