@@ -85,7 +85,7 @@ def save_transfers(rows):
 
     combined_df.to_excel(transfers_file, index=False)
 
-def last_row_filled():
+def last_row_filled_now():
     if not st.session_state.transfer_rows:
         return False
     last_row = st.session_state.transfer_rows[-1]
@@ -100,18 +100,19 @@ all_parts = parts_df["Combined"].tolist()
 # ---------- Session State ----------
 if "transfer_rows" not in st.session_state:
     st.session_state.transfer_rows = []
+if "add_new_row_next_cycle" not in st.session_state:
+    st.session_state.add_new_row_next_cycle = False
 
 # Add the first row at startup if empty
 if len(st.session_state.transfer_rows) == 0:
     add_row()
 
-# After form interactions, check if last row is filled
-if last_row_filled():
-    # Avoid adding multiple blank rows
-    if all(r["item_selected"] != "" for r in st.session_state.transfer_rows[:-1]):
-        prev_from = st.session_state.transfer_rows[-1]["from_location"]
-        prev_to = st.session_state.transfer_rows[-1]["to_location"]
-        add_row(prev_from, prev_to)
+# If flag set, add a new blank row now
+if st.session_state.add_new_row_next_cycle:
+    prev_from = st.session_state.transfer_rows[-1]["from_location"]
+    prev_to = st.session_state.transfer_rows[-1]["to_location"]
+    add_row(prev_from, prev_to)
+    st.session_state.add_new_row_next_cycle = False
 
 # ---------- App Interface ----------
 
@@ -173,7 +174,11 @@ for idx, row in enumerate(st.session_state.transfer_rows):
 
         st.markdown("</div>", unsafe_allow_html=True)
 
-# Actually delete rows
+# After displaying form, check if last row filled
+if last_row_filled_now():
+    st.session_state.add_new_row_next_cycle = True
+
+# Actually delete rows if user pressed delete
 for idx in sorted(rows_to_delete, reverse=True):
     delete_row(idx)
 
