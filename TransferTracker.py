@@ -108,8 +108,9 @@ rows_to_delete = []
 # Display transfer rows with card style
 for idx, row in enumerate(st.session_state.transfer_rows):
     with st.container():
+        # Start Card
         st.markdown(
-            f"""
+            """
             <div style='
                 background-color: #f7f7f7;
                 border-radius: 10px;
@@ -117,11 +118,14 @@ for idx, row in enumerate(st.session_state.transfer_rows):
                 margin-bottom: 20px;
                 box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             '>
-            <h4 style='margin-top: 0;'>Transfer {idx+1}</h4>
             """,
             unsafe_allow_html=True,
         )
 
+        # Transfer Number
+        st.markdown(f"<h4 style='margin-top: 0;'>Transfer {idx+1}</h4>", unsafe_allow_html=True)
+
+        # Form Fields inside Card
         cols = st.columns([4, 1, 3, 3])
 
         with cols[0]:
@@ -154,12 +158,14 @@ for idx, row in enumerate(st.session_state.transfer_rows):
             )
             st.session_state.transfer_rows[idx]["to_location"] = to_loc
 
+        # Delete Button inside card
         if st.button(f"❌ Delete Transfer {idx+1}", key=f"delete_{idx}"):
             rows_to_delete.append(idx)
 
+        # End Card
         st.markdown("</div>", unsafe_allow_html=True)
 
-# Delete rows if delete button pressed
+# Delete rows if requested
 for idx in sorted(rows_to_delete, reverse=True):
     delete_row(idx)
 
